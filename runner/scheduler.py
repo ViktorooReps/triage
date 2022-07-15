@@ -48,7 +48,8 @@ class GPUWatcher:
         return task
 
     def get_finished(self) -> Tuple[Task, ...]:
-        done, _ = await asyncio.wait(self._running_tasks, timeout=0)
+        done, pending = asyncio.run(asyncio.wait(self._running_tasks, timeout=0))
+        self._running_tasks = pending
         return tuple(done)
 
     @property
