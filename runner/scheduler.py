@@ -55,6 +55,8 @@ class GPUWatcher:
         child_process.wait()
         self._own_pids.remove(child_pid)
 
+        self._reserved_space -= task.memory_needed
+
         finished_task = set_exit_code(task, child_process.returncode)
         self._finished_tasks.append(finished_task)
 
@@ -63,8 +65,6 @@ class GPUWatcher:
 
     def get_finished(self) -> Tuple[Task, ...]:
         finished = tuple(self._finished_tasks)
-        for finished_task in finished:
-            self._reserved_space -= finished_task.memory_needed
         self._finished_tasks = []
         return finished
 
