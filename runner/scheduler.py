@@ -12,8 +12,7 @@ from typing import Iterable, Optional, Tuple
 from nvitop import Device
 
 from runner.task import Task, set_exit_code
-from runner.util import to_gb
-
+from runner.util import to_gb, prepare_cmd
 
 logger = logging.getLogger()
 loop = ThreadPoolExecutor()
@@ -26,6 +25,7 @@ class GPUWatcher:
         self._reserved_space = 0.0
         self._occupied_space = 0.0
         self._foreign_pids = None
+        self._own_pids = set()
         self._unavailable_until = 0.0
         self._wait_time = wait_time
         self._finished_tasks = []
@@ -34,6 +34,7 @@ class GPUWatcher:
         self._update()
 
     def submit_task(self, task: Task):
+        self._update()
         self._reserved_space += task.memory_needed
         loop.submit(self._run_task, task)
 
@@ -47,9 +48,18 @@ class GPUWatcher:
         child_env = os.environ.copy()
         child_env['CUDA_AVAILABLE_DEVICES'] = str(self._device)
         child_env['TASK_NAME'] = task.task_name
-        child_process = subprocess.run(task.cmd, stdout=redirect, stderr=redirect, env=child_env, shell=True)
+        child_process = subprocess.Popen(prepare_cmd(task.cmd), stdout=redirect, stderr=redirect, env=child_env)
+
+        child_pid = child_process.pid
+        self._own_pids.add(child_pid)
+        child_process.wait()
+        self._own_pids.remove(child_pid)
+
         finished_task = set_exit_code(task, child_process.returncode)
         self._finished_tasks.append(finished_task)
+
+        if task.output is not None:
+            redirect.close()
 
     def get_finished(self) -> Tuple[Task, ...]:
         finished = tuple(self._finished_tasks)
@@ -68,14 +78,16 @@ class GPUWatcher:
 
     @property
     def status(self) -> str:
+        self._update()
         return f'Total: {to_gb(self._device.memory_total())}\n' \
                f'Occupied: {self._occupied_space}\n' \
                f'Reserved: {self._reserved_space}\n' \
-               f'Available: {self.available_memory}'
+               f'Available: {self.available_memory}\n' \
+               f'Running PIDs: {self._own_pids}'
 
     def _update(self):
         processes = self._device.processes()
-        current_foreign_pids = {pid for pid, process in processes.items() if process.username != os.getlogin()}
+        current_foreign_pids = {pid for pid, process in processes.items() if pid not in self._own_pids}
         if self._foreign_pids is None:
             self._foreign_pids = current_foreign_pids
 
@@ -122,6 +134,7 @@ class Scheduler:
         # find available gpu
         free_watcher = None
         for watcher in self._watchers:
+            logger.info(f'Watcher status: {watcher.status}')
             if watcher.available_memory >= task.memory_needed:
                 free_watcher = watcher
                 break

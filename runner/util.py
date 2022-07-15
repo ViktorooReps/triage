@@ -1,5 +1,5 @@
 import collections
-from typing import Iterator, Callable, TypeVar, Any
+from typing import Iterator, Callable, TypeVar, Any, List
 
 
 def consume(iterator: Iterator):
@@ -15,3 +15,7 @@ def apply(fn: Callable[[_Any], Any], iterator: Iterator[_Any]) -> None:
 
 def to_gb(_bytes: int) -> float:
     return _bytes / 1024 / 1024 / 1024
+
+
+def prepare_cmd(cmd: str) -> List[str]:
+    return cmd.replace('  ', ' ').strip().split(' ')

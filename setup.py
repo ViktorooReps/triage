@@ -23,7 +23,7 @@ dependency_links = [x.strip().replace('git+', '') for x in all_reqs if 'git+' no
 setup(
     name='triage-runner',
     description='Script running tool for optimizing GPU memory utilization.',
-    version='0.1.0',
+    version='0.1.4',
     packages=find_packages(),  # list of all packages
     install_requires=install_requires,
     python_requires='>=3.6',
