@@ -10,6 +10,7 @@ from time import time, sleep
 from typing import Iterable, Optional, Tuple
 
 from nvitop import Device
+from psutil import Process
 
 from runner.task import Task, set_exit_code
 from runner.util import to_gb, prepare_cmd
@@ -39,6 +40,8 @@ class GPUWatcher:
         loop.submit(self._run_task, task)
 
     def _run_task(self, task: Task) -> None:
+        logger.info(f'Task is being put on device {self._device.index}!')
+
         redirect = asyncio.subprocess.PIPE
         if task.output is not None:
             output_path = Path(task.output)
@@ -46,7 +49,7 @@ class GPUWatcher:
             redirect = open(task.output, 'a')
 
         child_env = os.environ.copy()
-        child_env['CUDA_AVAILABLE_DEVICES'] = str(self._device)
+        child_env['CUDA_VISIBLE_DEVICES'] = str(self._device.index)
         child_env['TASK_NAME'] = task.task_name
         child_process = subprocess.Popen(prepare_cmd(task.cmd), stdout=redirect, stderr=redirect, env=child_env)
 
@@ -87,12 +90,22 @@ class GPUWatcher:
 
     def _update(self):
         processes = self._device.processes()
+
+        # update own pids with their children
+        for pid in self._own_pids:
+            children_pids = set(child.pid for child in Process(pid).children(recursive=True))
+            self._own_pids.update(children_pids)
+
         current_foreign_pids = {pid for pid, process in processes.items() if pid not in self._own_pids}
         if self._foreign_pids is None:
             self._foreign_pids = current_foreign_pids
 
         if set(current_foreign_pids).difference(set(self._foreign_pids)):
             # new processes appeared
+            logger.info(f'Foreign processor detected on device {self._device.index}: '
+                        f'fp{self._foreign_pids}, '
+                        f'cfp{current_foreign_pids}, '
+                        f'op{self._own_pids}')
             self._unavailable_until = time() + self._wait_time
 
         self._foreign_pids = current_foreign_pids

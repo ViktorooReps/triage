@@ -3,3 +3,4 @@ click-loglevel==0.4.0.post1
 tqdm==4.64.0
 setuptools==60.2.0
 nvitop==0.6.2
+psutil==5.9.1
