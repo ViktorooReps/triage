@@ -12,7 +12,9 @@ README = (HERE / "README.md").read_text()
 
 # automatically captured required modules for install_requires in requirements.txt and as well as configure dependency links
 with open(path.join(HERE, 'requirements.txt'), encoding='utf-8') as f:
-    all_reqs = f.read().split('\n')
+    def remove_version(req: str):
+        return req.split('==')[0]
+    all_reqs = tuple(map(remove_version, f.read().split('\n')))
 
 install_requires = [x.strip() for x in all_reqs if ('git+' not in x) and (not x.startswith('#')) and (not x.startswith('-'))]
 
@@ -21,7 +23,7 @@ dependency_links = [x.strip().replace('git+', '') for x in all_reqs if 'git+' no
 setup(
     name='triage-runner',
     description='Script running tool for optimizing GPU memory utilization.',
-    version='0.0.4',
+    version='0.1.0',
     packages=find_packages(),  # list of all packages
     install_requires=install_requires,
     python_requires='>=3.6',

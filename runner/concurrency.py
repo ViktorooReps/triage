@@ -15,7 +15,7 @@ def run_config_groups(config_groups: Iterable[Tuple[dict, ...]], progress_bars: 
     task_iterator = chain.from_iterable(starmap(_get_tasks, enumerate(config_groups)))
     tasks = sorted(task_iterator, key=lambda t: t.memory_needed)
 
-    logger.info(f'Running f{len(tasks)} tasks')
+    logger.info(f'Running {len(tasks)} tasks')
 
     completed: List[Task] = []
 

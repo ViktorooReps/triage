@@ -75,9 +75,11 @@ def format_gpus(gpus: str) -> Iterable[int]:
               help='Maximum number of concurrently running configs. No limit by default.')
 @click.option('-g', '--gpus', type=click.STRING,
               help='What GPUs to use. All available by default. Format: 0,2,3,1')
-@click.option('-i', '--gpu_ping_interval', type=click.FLOAT,
+@click.option('-i', '--gpu_ping_interval', type=click.FLOAT, default=1,
               help='Interval in seconds between GPU status checks.')
-@click.option("-l", "--log_level", type=LogLevel(), default=logging.NOTSET,
+@click.option('-w', '--wait', type=click.FLOAT, default=300,
+              help='Waiting time in seconds after new foreign process appeared on GPU.')
+@click.option('-l', '--log_level', type=LogLevel(), default=logging.WARNING,
               help='Logging level.')
 def cli(
         run_configs: Iterable[TextIO],
@@ -86,6 +88,7 @@ def cli(
         jobs: int,
         gpus: Optional[str],
         gpu_ping_interval: float,
+        wait: float,
         log_level: str
 ):
     if version:
@@ -117,7 +120,7 @@ def cli(
     tqdm_descriptions = [(cn if cn is not None else fn) for cn, fn in zip(config_names, file_names)]
     progress_bars = [tqdm.tqdm(desc=desc, total=len(cf_group)) for desc, cf_group in zip(tqdm_descriptions, grouped_configs)]
 
-    run_config_groups(grouped_configs, progress_bars, Scheduler(gpus, check_interval=gpu_ping_interval, concurrent_jobs=jobs))
+    run_config_groups(grouped_configs, progress_bars, Scheduler(gpus, check_interval=gpu_ping_interval, concurrent_jobs=jobs, waiting=wait))
 
 
 main = cli

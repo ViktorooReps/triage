@@ -26,6 +26,17 @@ class Task(NamedTuple):
     exit_code: Optional[int] = None
 
 
+def set_exit_code(task: Task, code: int) -> Task:
+    return Task(
+        group_id=task.group_id,
+        cmd=task.cmd,
+        task_name=task.task_name,
+        memory_needed=task.memory_needed,
+        output=task.output,
+        exit_code=code
+    )
+
+
 def _get_tasks(group_id: int, config_group: Iterable[dict]) -> Iterable[Task]:
     for config in config_group:
         yield Task(
