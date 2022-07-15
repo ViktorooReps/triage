@@ -1,42 +1,50 @@
-from itertools import starmap, chain
-from pprint import pprint
-from typing import Tuple, List, NamedTuple, Iterable
+import logging
+from itertools import chain, starmap
+from typing import Tuple, List, Iterable
 
 from tqdm import tqdm
 
-from runner.configs import get_cmd
+from runner.scheduler import Scheduler
+from runner.task import _get_tasks, Task
+from runner.util import apply
+
+logger = logging.getLogger()
 
 
-RUN_NAME = 'run'
+def run_config_groups(config_groups: Iterable[Tuple[dict, ...]], progress_bars: List[tqdm], scheduler: Scheduler):
+    task_iterator = chain.from_iterable(starmap(_get_tasks, enumerate(config_groups)))
+    tasks = sorted(task_iterator, key=lambda t: t.memory_needed)
 
+    logger.info(f'Running f{len(tasks)} tasks')
 
-def set_run_name(name: str):
-    global RUN_NAME
-    RUN_NAME = name
+    completed: List[Task] = []
 
+    def handle_completion(completed_task: Task) -> None:
+        completed.append(completed_task)
 
-def _get_run_name(config: dict) -> str:
-    config_name = config.get('config_name')
-    if config_name is not None:
-        return RUN_NAME + ':' + config_name
-    return RUN_NAME
+        # log info
+        message_prefix = f'[{len(completed)}/{len(tasks)}] ({completed_task.memory_needed:.2f}Gb) '
+        message_body = ('Task failed: ' if completed_task.exit_code else 'Task succeeded: ') + completed_task.cmd
+        logger.info(message_prefix + message_body)
 
+        # update bars
+        progress_bars[completed_task.group_id].update()
 
-class Task(NamedTuple):
-    cmd: str
-    run_name: str
-    memory_needed: float
+    for task_idx, task in enumerate(tasks):
+        while not scheduler.schedule(task):
+            completed_tasks = scheduler.get_finished()
+            apply(handle_completion, completed_tasks)
 
+        logger.info(f'[{task_idx + 1}/{len(tasks)}] ({task.memory_needed:.2f}Gb) Task scheduled to run: {task.cmd}.')
 
-def _get_tasks(config_group: Iterable[dict]) -> Iterable[Task]:
-    for config in config_group:
-        yield Task(cmd=get_cmd(config), run_name=_get_run_name(config), memory_needed=config['memory_needed'])
+    logger.info('Scheduled all tasks!')
 
+    while len(completed) < len(tasks):
+        completed_tasks = scheduler.get_finished()
+        apply(handle_completion, completed_tasks)
 
-def run_config_groups(config_groups: Iterable[Tuple[dict, ...]], progress_bars: List[tqdm]):
-    tasks_with_group_idx = []
-    for idx, config_group in enumerate(config_groups):
-        for task in _get_tasks(config_group):
-            tasks_with_group_idx.append((task, idx))
+    logger.info('Completed all tasks!')
 
-    pprint(tuple(tasks_with_group_idx))
+    failed_tasks = [task for task in completed if task.exit_code]
+
+    logger.info(f'Failed tasks: {len(failed_tasks)}/{len(tasks)}')

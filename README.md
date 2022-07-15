@@ -43,4 +43,4 @@ Stored in JSON format. The sample run configuration looks like this:
 ```
 Every entry in `args` list is an argument for `command`. An entry can be a list - in which case TRIAGE will iterate through all the possible combinations of all values in list entries. The example script above will be run 3 times with an argument `--seed` set to 1, 2 and 3.
 
-Parameter `config_name` is optional and is used for logging the results (see `--logfile` option). Based on this parameter environment variable `RUN_NAME` is set in order to be used by running script.
+Parameter `config_name` is optional and is used for logging the results (see `--logfile` option). Based on this parameter environment variable `TASK_NAME` is set in order to be used by running script.
