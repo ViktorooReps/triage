@@ -134,13 +134,11 @@ class Scheduler:
         # find available gpu
         free_watcher = None
         for watcher in self._watchers:
-            logger.info(f'Watcher status: {watcher.status}')
             if watcher.available_memory >= task.memory_needed:
                 free_watcher = watcher
                 break
 
         if free_watcher is None:
-            logger.info('No available memory!')
             return False
 
         free_watcher.submit_task(task)
