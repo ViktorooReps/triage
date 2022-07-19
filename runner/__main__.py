@@ -73,6 +73,8 @@ def format_gpus(gpus: str) -> Iterable[int]:
               help='Print overseer version.')
 @click.option('-j', '--jobs', type=click.INT,
               help='Maximum number of concurrently running configs. No limit by default.')
+@click.option('-r', '--repeat', type=click.INT, default=1,
+              help='Rerun failed tasks.')
 @click.option('-g', '--gpus', type=click.STRING,
               help='What GPUs to use. All available by default. Format: 0,2,3,1')
 @click.option('-i', '--gpu_ping_interval', type=click.FLOAT, default=10.0,
@@ -88,6 +90,7 @@ def cli(
         run_name: Optional[str],
         version: bool,
         jobs: int,
+        repeat: int,
         gpus: Optional[str],
         gpu_ping_interval: float,
         wait: float,
@@ -126,7 +129,8 @@ def cli(
     run_config_groups(
         grouped_configs,
         progress_bars,
-        Scheduler(gpus, check_interval=gpu_ping_interval, concurrent_jobs=jobs, wait_time=wait, utilization_limit=utilization_limit)
+        Scheduler(gpus, check_interval=gpu_ping_interval, concurrent_jobs=jobs, wait_time=wait, utilization_limit=utilization_limit),
+        repeat=repeat
     )
 
 

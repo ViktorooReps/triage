@@ -9,13 +9,21 @@ from pathlib import Path
 from time import time, sleep
 from typing import Iterable, Optional, Tuple
 
-from nvitop import Device
 from psutil import Process
 
 from runner.task import Task, set_exit_code
 from runner.util import to_gb, prepare_cmd
 
 logger = logging.getLogger()
+
+try:
+    from nvitop import Device, NVMLError
+
+    Device.count()
+except NVMLError as e:
+    logger.error('GPU status checking is disabled!')
+    from runner.stub_nvitop import Device
+
 loop = ThreadPoolExecutor()
 
 
@@ -78,10 +86,12 @@ class GPUWatcher:
 
         # give time for foreign processes to allocate memory
         if time() < self._unavailable_until:
+            logger.debug(f'[device:{self._device.index}] Rejected. Reason: waiting on foreign process.')
             return 0.0
 
         # do not make available if utilization limit is exceeded
         if self._device.gpu_utilization() >= self._utilization_limit:
+            logger.debug(f'[device:{self._device.index}] Rejected. Reason: GPU utilization is too high.')
             return 0.0
 
         return to_gb(self._device.memory_total()) - self._occupied_space - self._reserved_space
@@ -160,6 +170,7 @@ class Scheduler:
                 break
 
         if free_watcher is None:
+            logger.debug(f'No GPU is available.')
             return False
 
         free_watcher.submit_task(task)

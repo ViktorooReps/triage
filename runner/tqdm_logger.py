@@ -18,8 +18,4 @@ class TqdmLoggingHandler(logging.Handler):
 
 def setup_logging():
     # set up global tqdm logger
-    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='[%d %b %H:%M]')
-    logger = logging.getLogger()
-    if logger.hasHandlers():
-        logger.handlers.clear()
-    logger.addHandler(TqdmLoggingHandler())
+    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='[%d %b %H:%M]', handlers=[TqdmLoggingHandler()])
