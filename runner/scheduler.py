@@ -21,7 +21,7 @@ loop = ThreadPoolExecutor()
 
 class GPUWatcher:
 
-    def __init__(self, gpu: int, *, wait_time: float = 300):
+    def __init__(self, gpu: int, *, wait_time: float = 300, utilization_limit: float = 0.9):
         self._device = Device(gpu)
         self._reserved_space = 0.0
         self._occupied_space = 0.0
@@ -29,6 +29,7 @@ class GPUWatcher:
         self._own_pids = set()
         self._unavailable_until = 0.0
         self._wait_time = wait_time
+        self._utilization_limit = utilization_limit
         self._finished_tasks = []
         self._last_task_id = 0
 
@@ -74,7 +75,13 @@ class GPUWatcher:
     @property
     def available_memory(self) -> float:
         self._update()
+
+        # give time for foreign processes to allocate memory
         if time() < self._unavailable_until:
+            return 0.0
+
+        # do not make available if utilization limit is exceeded
+        if self._device.gpu_utilization() >= self._utilization_limit:
             return 0.0
 
         return to_gb(self._device.memory_total()) - self._occupied_space - self._reserved_space
@@ -121,11 +128,12 @@ class Scheduler:
             *,
             check_interval: float = 1.0,
             concurrent_jobs: Optional[int] = None,
-            waiting: float = 300
+            wait_time: float = 300,
+            utilization_limit: float = 0.9
     ):
         if gpus is None:
             gpus = range(Device.count())
-        watcher_builder = partial(GPUWatcher, wait_time=waiting)
+        watcher_builder = partial(GPUWatcher, wait_time=wait_time, utilization_limit=utilization_limit)
         self._watchers = tuple(map(watcher_builder, gpus))
         self._last_check_time = 0
         self._check_interval = check_interval
