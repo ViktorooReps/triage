@@ -82,7 +82,7 @@ def format_gpus(gpus: str) -> Iterable[int]:
 @click.option('-w', '--wait', type=click.FLOAT, default=300,
               help='Waiting time in seconds after new foreign process appeared on GPU.')
 @click.option('-u', '--utilization_limit', type=click.FLOAT, default=0.9,
-              help='GPU utilization limit. Ranges from 0.0 to 1.0.')
+              help='GPU utilization limit in percents. Ranges from 0.0 to 100.0.')
 @click.option('-l', '--log_level', type=LogLevel(), default=logging.WARNING,
               help='Logging level.')
 def cli(
