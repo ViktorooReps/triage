@@ -1,6 +1,6 @@
 # TRIAGE
 
-Intended use: running a multitude of GPU-intensive scripts in a way that optimizes GPU memory utilization. Great for ML/DL based experiments on servers shared between several users.
+Triage is a lightweight Python runner that turns a pile of training scripts into a self-managed queue, launching each job only when the GPUs have enough free memory. Give it one or more JSON “run configurations” with a memory budget and argument grid; Triage watches nvidia-smi, starts the job the moment resources are free, iterates through all parameter combinations, and records the run under a unique task name. It keeps shared servers from low VRAM utilization and lets you squeeze every last gigabyte out of your hardware during deep-learning experiments.
 
 ## Installation
 
